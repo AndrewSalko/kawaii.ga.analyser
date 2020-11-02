@@ -11,6 +11,7 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 
 using kawaii.ga.analyser.RevenueReport;
+using kawaii.ga.analyser.PagesReport;
 
 namespace kawaii.ga.analyser
 {
@@ -71,38 +72,108 @@ namespace kawaii.ga.analyser
 
 				var service = new Google.Apis.AnalyticsReporting.v4.AnalyticsReportingService(init);
 
-				var publisherRevenueReport = new PublisherRevenueReportBuilder(service, gaViewID);
-				var revenueReport = publisherRevenueReport.Build(startDate, endDate);
+				bool buildRevenueReport = true;
+				bool buildPagesReport = true;
 
-				var reportRows = revenueReport.Rows;
+				//URL => сведения о показах и доходе с него
+				Dictionary<string, RevenueReportRow> urlToRevenueRow = new Dictionary<string, RevenueReportRow>();
 
-				if (reportRows != null)
+				if (buildRevenueReport)
 				{
-					Dictionary<string, PostGroup> urlToRows = new Dictionary<string, PostGroup>();
+					var publisherRevenueReport = new PublisherRevenueReportBuilder(service, gaViewID);
+					var revenueReport = publisherRevenueReport.Build(startDate, endDate);
 
-					foreach (var item in reportRows)
+					var reportRows = revenueReport.Rows;
+
+					if (reportRows != null)
 					{
-						if (!urlToRows.TryGetValue(item.MainPostURL, out PostGroup postGroup))
+						Dictionary<string, PostGroup> urlToRows = new Dictionary<string, PostGroup>();
+
+						foreach (var item in reportRows)
 						{
-							postGroup = new PostGroup(item.MainPostURL);
-							urlToRows[item.MainPostURL] = postGroup;
+							urlToRevenueRow[item.URL] = item;
+
+							if (!urlToRows.TryGetValue(item.MainPostURL, out PostGroup postGroup))
+							{
+								postGroup = new PostGroup(item.MainPostURL);
+								urlToRows[item.MainPostURL] = postGroup;
+							}
+
+							postGroup.Add(item);
 						}
 
-						postGroup.Add(item);
+						//теперь сгруппируем по доходу
+
+						var ord = (from x in urlToRows orderby x.Value.TotalRevenue descending select x.Value).ToArray();
+
+						string reportFileName = Path.Combine(startPath, "Revenue report full.txt");
+						_SaveRevenueReport(reportFileName, ord, revenueReport.TotalRevenue, false);
+
+						//и еще краткий отчет - где исключено все, что мало смысленно
+						string reportFileNameOpt = Path.Combine(startPath, "Revenue report optimized.txt");
+						_SaveRevenueReport(reportFileNameOpt, ord, revenueReport.TotalRevenue, true);
+
 					}
 
-					//теперь сгруппируем по доходу
+					Console.WriteLine("ADSense revenue report done...");
+				}
 
-					var ord = (from x in urlToRows orderby x.Value.TotalRevenue descending select x.Value).ToArray();
+				if (buildPagesReport)
+				{
+					var pagesReportBuilder = new PagesReport.VisitedPagesReportBuilder(service, gaViewID);
+					var pagesReport = pagesReportBuilder.Build(startDate, endDate);
 
-					string reportFileName = Path.Combine(startPath, "Revenue report full.txt");
-					_SaveRevenueReport(reportFileName, ord, revenueReport.TotalRevenue, false);
+					var pagesReportRows = pagesReport.Rows;
+					
+					string reportPagesFileName = Path.Combine(startPath, "Pages report.txt");
 
-					//и еще краткий отчет - где исключено все, что мало смысленно
-					string reportFileNameOpt = Path.Combine(startPath, "Revenue report optimized.txt");
-					_SaveRevenueReport(reportFileNameOpt, ord, revenueReport.TotalRevenue, true);
+					_SavePagesReport(reportPagesFileName, pagesReportRows);
+
+					Console.WriteLine("Visited pages report done...");
+
+					//теперь можно найти все страницы с более-менее приличной посещаемостью, но без показов ADSense - это значит у них "проблемы"
+					int minViews = 50;  //это минимальный порог просмотров для анализа
+
+
+					string badPagesFileReport = Path.Combine(startPath, "Failed pages report.txt");
+
+					using (var failedLog = File.CreateText(badPagesFileReport))
+					{
+						foreach (var row in pagesReportRows)
+						{
+							if (row.PageViews < minViews)
+								continue;
+
+							//смотрим по этому же урлу статус отчета ADSense - показов должно быть больше 0. Если 0 - это страница под "баном"
+							string url = row.URL;
+
+							//в корне сайта нет баннеров
+							if (url == "/")
+								continue;
+
+							//баннеров нет на страницах (1-2-3...) , на тегах, категориях, библиотеке и архиве
+							if (url.StartsWith("/page/") || url.StartsWith("/tag/") || url.StartsWith("/category/") || url.StartsWith("/library/"))
+								continue;
+
+							string adsViews = "NO ADS";
+							if (urlToRevenueRow.TryGetValue(url, out RevenueReportRow foundRev))
+							{
+								if (foundRev.Impressions > 0)
+								{
+									continue;
+								}
+
+								//adsViews = $"Impressions: {foundRev.Impressions}, Clicks: {foundRev.Clicks}, Revenue: {foundRev.Revenue}";
+							}
+
+							failedLog.WriteLine($"{url} - Page views: {row.PageViews} - {adsViews}");
+						}
+					}//using failedLog
 
 				}
+
+
+
 
 				Console.WriteLine("Done");
 			}
@@ -110,6 +181,23 @@ namespace kawaii.ga.analyser
 			{
 				Console.WriteLine(ex.ToString());
 			}
+
+		}
+
+		static void _SavePagesReport(string reportFileName, VisitedPagesReportRow[] rows)
+		{
+			using (var log = File.CreateText(reportFileName))
+			{
+				foreach (var item in rows)
+				{
+					log.WriteLine($"{item.URL}  -  {item.PageViews}  -  Unique views: {item.UniquePageViews}  -  Entrances: {item.Entrances}");
+				}
+
+				log.WriteLine();
+
+				log.Flush();
+
+			}//using reportStream
 
 		}
 
