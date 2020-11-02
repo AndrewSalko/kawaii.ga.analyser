@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30517.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "kawaii.ga.analyser", "kawaii.ga.analyser\kawaii.ga.analyser.csproj", "{A2513ED4-EA9B-4F6C-8E6F-0A3D2D461484}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2513ED4-EA9B-4F6C-8E6F-0A3D2D461484}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2513ED4-EA9B-4F6C-8E6F-0A3D2D461484}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2513ED4-EA9B-4F6C-8E6F-0A3D2D461484}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2513ED4-EA9B-4F6C-8E6F-0A3D2D461484}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DAA49CE4-B8AA-43CE-821A-45D620E0605A}
+	EndGlobalSection
+EndGlobal
