@@ -132,8 +132,7 @@ namespace kawaii.ga.analyser
 					Console.WriteLine("Visited pages report done...");
 
 					//теперь можно найти все страницы с более-менее приличной посещаемостью, но без показов ADSense - это значит у них "проблемы"
-					int minViews = 50;  //это минимальный порог просмотров для анализа
-
+					int minViews = 10;  //это минимальный порог просмотров для анализа
 
 					string badPagesFileReport = Path.Combine(startPath, "Failed pages report.txt");
 
@@ -141,7 +140,8 @@ namespace kawaii.ga.analyser
 					{
 						foreach (var row in pagesReportRows)
 						{
-							if (row.PageViews < minViews)
+							int views = row.PageViews;
+							if (views < minViews)
 								continue;
 
 							//смотрим по этому же урлу статус отчета ADSense - показов должно быть больше 0. Если 0 - это страница под "баном"
@@ -152,7 +152,7 @@ namespace kawaii.ga.analyser
 								continue;
 
 							//баннеров нет на страницах (1-2-3...) , на тегах, категориях, библиотеке и архиве
-							if (url.StartsWith("/page/") || url.StartsWith("/tag/") || url.StartsWith("/category/") || url.StartsWith("/library/"))
+							if (url.StartsWith("/page/") || url.StartsWith("/tag/") || url.StartsWith("/category/") || url.StartsWith("/library/") || url.StartsWith("/anime-by-genres/") || url.StartsWith("/archives/") || url.StartsWith("/?source=pwa") || url.StartsWith("/?s="))
 								continue;
 
 							string adsViews = "NO ADS";
@@ -160,10 +160,16 @@ namespace kawaii.ga.analyser
 							{
 								if (foundRev.Impressions > 0)
 								{
-									continue;
-								}
+									//показы были, но может это единичные вещи - а посещаемость страницы весьма неплохая?
+									//какой процент показов ?
+									float percent = foundRev.Impressions / views;
+									if (percent > 0.5)
+									{
+										continue;	//норм.уровень показов баннеров
+									}
 
-								//adsViews = $"Impressions: {foundRev.Impressions}, Clicks: {foundRev.Clicks}, Revenue: {foundRev.Revenue}";
+									adsViews = $"Impressions: {foundRev.Impressions}   Revenue: {foundRev.Revenue}";
+								}
 							}
 
 							failedLog.WriteLine($"{url} - Page views: {row.PageViews} - {adsViews}");
