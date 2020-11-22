@@ -30,8 +30,13 @@ namespace kawaii.ga.analyser
 
 			try
 			{
-				DateTime startDate = new DateTime(2020, 10, 01);
-				DateTime endDate = new DateTime(2020, 10, 31);
+				DateTime now = DateTime.Now;
+				int lastDay = DateTime.DaysInMonth(now.Year, now.Month);
+
+				DateTime startDate = new DateTime(now.Year, now.Month, 01);
+				DateTime endDate = new DateTime(now.Year, now.Month, lastDay);
+
+				Console.WriteLine("Report from {0} to {1}", startDate, endDate);
 
 				string gaViewID = "142868091";  //View ID in Google Analytics
 
@@ -162,10 +167,12 @@ namespace kawaii.ga.analyser
 								{
 									//показы были, но может это единичные вещи - а посещаемость страницы весьма неплохая?
 									//какой процент показов ?
-									float percent = foundRev.Impressions / views;
-									if (percent > 0.5)
+									float percent = views / 100;
+									float viewsPercent = foundRev.Impressions / percent;
+
+									if (viewsPercent > 35)	//35% от общего числа просмотров страницы считаем плохим показателем
 									{
-										continue;	//норм.уровень показов баннеров
+										continue;
 									}
 
 									adsViews = $"Impressions: {foundRev.Impressions}   Revenue: {foundRev.Revenue}";
